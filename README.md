@@ -172,16 +172,40 @@ Mutex的Lock操作暗含了Acquire语义，Unlock暗含了Release语义。**这�
 
 ## SC Formalism
 
+> ".. the result of any execution is the same as if the reads and writes occurred in some order, and the operations of each individual processor appear in this sequence in the order specified by its program"
+
+```cpp
+r1, r2 = 0;
+
+p1()
+{
+    x.store(1);
+    r1 = y.load();
+}
+
+p2()
+{
+    y.store(1);
+    r2 = x.load();
+}
+```
+
+L(a)和S(a)分别表示load和store。Orders &lt;p 和 &lt;m 定义了程序(program)和全局的内存(memory)顺序。程序顺序&lt;p 是一个per-core的全序。全局内存顺序&lt;m是一个在所有核上的内存操作的全序。
+
 An SC execution requires:
 
 (1) All cores insert their loads and stores into the order < m respecting their program order, regardless of whether they are to the same or different addresses(i.e., a=b or a≠b). There are four cases:
 
-(1) 每个核(线程)在把它自己所属的L、S操作插入到memory order时，都要严格遵守自己线程内的指令排序。总共有四种情况（下面的a和b可以相等，也可以不相等）:
+(1) 每个核(线程)在把它自己所属的L、S操作插入到memory order时(&lt;m)，都要严格遵守自己线程内的指令排序(&lt;p)。总共有四种情况（下面的a和b可以相等，也可以不相等）:
 
+- if L(a) &lt;p L(b) => L(a) &lt;m L(b)   // #LoadLoad
+- if L(a) &lt;p S(b) => L(a) &lt;m S(b)   // #LoadStore
+- if S(a) &lt;p S(b) => S(a) &lt;m S(b)   // #StoreStore
+- if S(a) &lt;p L(b) => S(a) &lt;m L(b)   // #StoreLoad
 
-- b
-- a
+(2) 所有的load操作从它之前的store操作（在全序的memory order上）获取值。
 
+Value of L(a) = Value of MAX &lt;m {S(a) | S(a) &lt;m L(a)}, where MAX &lt;m denotes "latest in memory order."
 
 ## preshing BLOG
 
@@ -574,6 +598,14 @@ bool TryReceiveMessage(Message& result)
 线程间的同步和内存顺序决定表达式的求值和side effects在程序执行的不同线程间如何排序。它们以下列项目定义：
 
 ## CPP
+
+### Race condition
+
+A memory location(variable) can be simultaneously access by two threads, and at least one thread is a writer.
+
+> Memory location == non-bitfield variable, or sequence of non-zero length bitfield variables.
+
+> Simultaneously == **without happens-before ordering**
 
 ### Sequenced-before
 
